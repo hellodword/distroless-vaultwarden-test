@@ -1,0 +1,16 @@
+version: "3"
+
+services:
+  vaultwarden:
+    # image: vaultwarden/server:1.30.5
+    build:
+      context: .
+      dockerfile: ./Dockerfile.1
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      # chown -R 65532:65532 data
+      - ./data:/home/nonroot/data:rw
+    restart: no
+    env_file:
+      - .env.vaultwarden

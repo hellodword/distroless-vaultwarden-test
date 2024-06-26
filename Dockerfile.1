@@ -1,0 +1,41 @@
+FROM vaultwarden/server:1.30.5 as base
+
+ARG TIME_ZONE
+
+COPY resolve_dependencies.sh /
+
+RUN mkdir -p /opt/bin /opt/etc /opt/usr/bin && \
+  cp /usr/share/zoneinfo/${TIME_ZONE:-UTC} /opt/etc/localtime && \
+  cp -a --parents /etc/passwd /opt && \
+  cp -a --parents /etc/group /opt && \
+  sed -i '1 s@^.*$@#!/usr/bin/env sh\nset -x@' /start.sh && \
+  sed -i '1 s@^.*$@#!/usr/bin/env sh\nset -x@' /healthcheck.sh && \
+  cp -a --parents /start.sh /opt && \
+  cp -a --parents /healthcheck.sh /opt && \
+  cp -a --parents /vaultwarden /opt && \
+  /resolve_dependencies.sh /vaultwarden | xargs -I {} bash -xc 'cp -a --parents {}* /opt' && \
+  cp -a --parents "$(which env)" /opt && \
+  /resolve_dependencies.sh "$(which env)" | xargs -I {} bash -xc 'cp -a --parents {}* /opt' && \
+  cp -a --parents "$(which curl)" /opt && \
+  /resolve_dependencies.sh "$(which curl)" | xargs -I {} bash -xc 'cp -a --parents {}* /opt' && \
+  cp -a --parents "$(which grep)" /opt && \
+  /resolve_dependencies.sh "$(which grep)" | xargs -I {} bash -xc 'cp -a --parents {}* /opt' && \
+  cp -a --parents "$(which sed)" /opt && \
+  /resolve_dependencies.sh "$(which sed)" | xargs -I {} bash -xc 'cp -a --parents {}* /opt' && \
+  cp -a --parents "$(which echo)" /opt && \
+  /resolve_dependencies.sh "$(which echo)" | xargs -I {} bash -xc 'cp -a --parents {}* /opt' && \
+  cp -a --parents "$(which dash)" /opt && \
+  /resolve_dependencies.sh "$(which dash)" | xargs -I {} bash -xc 'cp -a --parents {}* /opt' && \
+  cp -a --parents "$(which sh)" /opt && \
+  cp -a --parents /bin/sh /opt && \
+  true
+
+FROM gcr.io/distroless/base-debian12:nonroot
+
+COPY --from=base /opt /
+
+ENV HOME=/home/nonroot
+
+HEALTHCHECK --interval=60s --timeout=10s CMD ["/healthcheck.sh"]
+
+CMD ["/vaultwarden"]
